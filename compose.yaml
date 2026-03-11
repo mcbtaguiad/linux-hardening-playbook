@@ -1,0 +1,12 @@
+services:
+  ansible-libvirt:
+      container_name: ansible-linux-hardening
+      image:  ghcr.io/mcbtaguiad/linux-hardening-playbook:v1.0.0
+      build:
+          context: .
+          dockerfile: ./docker/Dockerfile
+      # entrypoint: tail -f /dev/null
+      restart: always
+      volumes:
+      - "./:/ansible"
+      - "~/.ssh/:/root/.ssh"

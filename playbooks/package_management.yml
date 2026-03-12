@@ -1,0 +1,14 @@
+---
+- name: packages and services playbook
+  hosts: all
+  become: true          # use sudo for all tasks
+  become_method: sudo
+  # ansible_become_pass: "YOUR_SUDO_PASSWORD"
+  roles:
+    - role: package_management
+      vars:
+        unnecessary_services:
+          - cups
+          - rpcbind
+          - nfs-server
+          - vsftpd 

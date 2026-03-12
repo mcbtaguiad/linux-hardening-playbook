@@ -1,0 +1,114 @@
+---
+- name: Update all packages (Debian)
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Update all packages (RHEL)
+  ansible.builtin.yum:
+    name: "*"
+    state: latest
+  when: ansible_os_family == 'RedHat'
+
+
+- name: Install unattended-upgrades package
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Configure unattended-upgrades to security only
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+              "${distro_id}:${distro_codename}-security";
+      };
+      Unattended-Upgrade::Automatic-Reboot "true";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Enable periodic unattended-upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Download-Upgradeable-Packages "1";
+      APT::Periodic::AutocleanInterval "7";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+  when: ansible_os_family == 'Debian'
+
+- name: Install dnf-automatic
+  ansible.builtin.yum:
+    name: dnf-automatic
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Copy dnf5 automatic configuration
+  ansible.builtin.copy:
+    src: /usr/share/dnf5/dnf5-plugins/automatic.conf
+    dest: /etc/dnf/automatic.conf
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Configure dnf-automatic for security updates
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/automatic.conf
+    regexp: '^upgrade_type ='
+    line: 'upgrade_type = security'
+  when: ansible_os_family == 'RedHat'
+
+- name: Enable and start dnf-automatic timer 
+  ansible.builtin.systemd:
+    name: dnf-automatic.timer
+    enabled: yes
+    state: started
+  when: ansible_os_family == 'RedHat'
+
+- name: Install Fail2Ban
+  ansible.builtin.package:
+    name: fail2ban
+    state: present
+
+- name: Enable and start Fail2Ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: yes
+
+- name: Install logrotate
+  ansible.builtin.package:
+    name: logrotate
+    state: present
+
+- name: Install time service
+  ansible.builtin.package:
+    name: chrony
+    state: present
+
+- name: Enable and start time service
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: yes
+
+- name: Stop and disable unnecessary services (if present)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  loop: "{{ unnecessary_services }}"
+  ignore_errors: yes  

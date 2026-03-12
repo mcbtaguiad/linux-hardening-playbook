@@ -1,0 +1,35 @@
+---
+- name: system hardening playbook
+  hosts: all
+  become: true          # use sudo for all tasks
+  become_method: sudo
+  # ansible_become_pass: "YOUR_SUDO_PASSWORD"
+  roles:
+    - role: system_hardening
+      vars:
+        devel_packages_debian:
+          - gcc
+          - g++
+          - make
+          - build-essential
+          - kernel-devel
+          - linux-headers-$(uname -r)
+        devel_packages_redhat:
+          - gcc
+          - gcc-c++
+          - make
+          - kernel-devel
+          - redhat-lsb-core
+          - perl
+        secure_dirs:
+          - /etc/ssh
+          - /etc/sudoers.d
+        kernel_hardening:
+          net.ipv4.ip_forward: 0
+          net.ipv4.conf.all.accept_redirects: 0
+          net.ipv4.conf.all.send_redirects: 0
+          net.ipv4.conf.all.accept_source_route: 0
+          net.ipv4.tcp_syncookies: 1
+          net.ipv4.conf.all.rp_filter: 1
+          kernel.randomize_va_space: 2
+

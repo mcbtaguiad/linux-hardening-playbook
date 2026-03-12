@@ -1,0 +1,117 @@
+---
+- name: Remove development packages on Debian/Ubuntu
+  ansible.builtin.apt:
+    name: "{{ devel_packages_debian }}"
+    state: absent
+    autoremove: yes
+  when: ansible_os_family == "Debian"
+  ignore_errors: yes
+
+- name: Remove development packages on RHEL/CentOS
+  ansible.builtin.yum:
+    name: "{{ devel_packages_redhat }}"
+    state: absent
+  when: ansible_os_family == "RedHat"
+  ignore_errors: yes
+
+- name: Ensure /tmp is mounted with noexec
+  ansible.builtin.mount:
+    path: /tmp
+    fstype: tmpfs
+    opts: defaults,noexec,nosuid,nodev
+    state: mounted
+  ignore_errors: yes
+
+- name: Ensure /var/tmp is mounted with noexec
+  ansible.builtin.mount:
+    path: /var/tmp
+    fstype: tmpfs
+    opts: defaults,noexec,nosuid,nodev
+    state: mounted
+  ignore_errors: yes
+
+- name: Make directories immutable
+  ansible.builtin.command: "chattr +i {{ item }}"
+  loop: "{{ secure_dirs }}"
+  ignore_errors: yes
+
+- name: Install auditd
+  ansible.builtin.package:
+    name: auditd
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install auditd
+  ansible.builtin.package:
+    name: audit
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Enable and start auditd
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: yes
+
+- name: Ensure audit rules exist
+  ansible.builtin.copy:
+    dest: /etc/audit/rules.d/audit.rules
+    content: |
+      -w /etc/passwd -p wa -k passwd_changes
+      -w /etc/shadow -p wa -k shadow_changes
+      -w /etc/group -p wa -k group_changes
+      -w /etc/sudoers -p wa -k sudoers_changes
+    owner: root
+    group: root
+    mode: '0640'
+    backup: yes
+
+- name: Reload auditd rules
+  ansible.builtin.command: auditctl -R /etc/audit/audit.rules
+
+- name: Install AIDE
+  ansible.builtin.package:
+    name: aide
+    state: present
+
+- name: Initialize AIDE database
+  ansible.builtin.command: "aide --init"
+  args:
+    creates: /var/lib/aide/aide.db.new.gz
+
+# - name: Move AIDE database to default location
+#   ansible.builtin.command: "mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz"
+#   args:
+#     removes: /var/lib/aide/aide.db.new.gz
+
+- name: Initialize AIDE database
+  ansible.builtin.command: aide --init --config /etc/aide/aide.conf
+  args:
+    creates: /var/lib/aide/aide.db.new.gz
+
+- name: Ensure sudo requires password and uses log
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    regexp: '^Defaults\s+env_reset'
+    line: 'Defaults    env_reset, logfile=/var/log/sudo.log, timestamp_timeout=0'
+    state: present
+    validate: '/usr/sbin/visudo -cf %s'
+
+- name: Apply kernel hardening
+  ansible.builtin.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop: "{{ kernel_hardening | dict2items }}"
+
+- name: Persist sysctl hardening
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-hardening.conf
+    content: |
+      {% for key,value in kernel_hardening.items() %}
+      {{ key }} = {{ value }}
+      {% endfor %}
+    owner: root
+    group: root
+    mode: '0644'

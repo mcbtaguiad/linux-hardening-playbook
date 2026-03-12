@@ -1,0 +1,27 @@
+---
+- name: Install curl
+  ansible.builtin.package:
+    name: curl
+    state: present
+
+- name: Copy telegram login script
+  ansible.builtin.copy:
+    src: telegram_alert.sh
+    dest: /usr/local/bin/telegram_login_alert.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create telegram config
+  ansible.builtin.template:
+    src: telegram.conf.j2
+    dest: /etc/telegram_login_alert.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Enable SSH login alert via PAM
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    line: "session optional pam_exec.so /usr/local/bin/telegram_login_alert.sh"
+    insertafter: EOF

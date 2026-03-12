@@ -1,0 +1,11 @@
+---
+- name: ssh login alert playbook
+  hosts: all
+  become: true          # use sudo for all tasks
+  become_method: sudo
+  # ansible_become_pass: "YOUR_SUDO_PASSWORD"
+  roles:
+    - role: ssh_login_alert
+      vars:
+        telegram_bot_token: "xxxxxxxxxxxxxxx"
+        telegram_chat_id: "xxxxxxxxx"

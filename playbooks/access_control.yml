@@ -1,0 +1,10 @@
+- name: user group playbook
+  hosts: all
+  become: true
+  become_method: sudo
+
+  roles:
+    - role: access_control
+      vars:
+        max_logins: 2
+        password_minlen: 12

@@ -57,10 +57,25 @@
   ansible.builtin.copy:
     dest: /etc/audit/rules.d/audit.rules
     content: |
+       # identify file
       -w /etc/passwd -p wa -k passwd_changes
       -w /etc/shadow -p wa -k shadow_changes
       -w /etc/group -p wa -k group_changes
       -w /etc/sudoers -p wa -k sudoers_changes
+
+      # sudo
+      -w /etc/sudoers -p wa -k sudo
+      -w /etc/sudoers.d/ -p wa -k sudo
+
+      # ssh
+      -w /etc/ssh/sshd_config -p wa -k ssh
+
+      # time changes
+      -a always,exit -F arch=b64 -S adjtimex,settimeofday -k time_change
+      -w /etc/localtime -p wa -k time_change
+
+      # kernel modules
+      -a always,exit -F arch=b64 -S init_module,finit_module,delete_module -k modules
     owner: root
     group: root
     mode: '0640'

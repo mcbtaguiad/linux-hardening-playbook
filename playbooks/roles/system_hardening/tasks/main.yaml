@@ -1,4 +1,9 @@
 ---
+- name: Ensure SELinux is enforcing
+  ansible.posix.selinux:
+    policy: targeted
+    state: enforcing
+
 - name: Remove development packages on Debian/Ubuntu
   ansible.builtin.apt:
     name: "{{ devel_packages_debian }}"

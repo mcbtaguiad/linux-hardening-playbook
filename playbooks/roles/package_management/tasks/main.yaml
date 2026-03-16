@@ -21,7 +21,7 @@
 
 - name: Configure unattended-upgrades to security only
   ansible.builtin.copy:
-    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    dest: /etc/apt/apt.conf.d/50-unattended-upgrades
     content: |
       Unattended-Upgrade::Allowed-Origins {
               "${distro_id}:${distro_codename}-security";

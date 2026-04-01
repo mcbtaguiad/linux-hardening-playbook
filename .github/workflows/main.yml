@@ -1,4 +1,4 @@
-name: Build-Push-Deploy-Dev
+name: build-scan
 
 on:
   pull_request:
